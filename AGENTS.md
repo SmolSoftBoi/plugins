@@ -35,11 +35,13 @@ Each plugin entry should include:
   plugin bundles skills, app mappings, MCP servers, or install-surface assets.
 - Optional `examples/` and `tests/` directories when source examples or
   validation fixtures make the plugin easier to maintain.
-  Keep only `plugin.json` inside `.codex-plugin/`. Keep `skills/`, `assets/`,
-  `.mcp.json`, and `.app.json` at the plugin root.
-  Future shared validation schemas should live under a root-level `schemas/`
-  directory. Do not add schema files until the manifest shape has stabilised or a
-  task explicitly asks for them.
+
+Keep only `plugin.json` inside `.codex-plugin/`. Keep `skills/`, `assets/`,
+`.mcp.json`, and `.app.json` at the plugin root.
+
+Future shared validation schemas should live under a root-level `schemas/`
+directory. Do not add schema files until the manifest shape has stabilised or a
+task explicitly asks for them.
 
 ## Plugin Entry Expectations
 
@@ -75,11 +77,12 @@ Run the closest available quality gates after making changes, in this order:
 2. Typecheck.
 3. Tests.
 4. Build.
-   If no scripts exist, validate the changed Markdown and catalogue paths manually.
-   At minimum, check that references use `plugins/<plugin-slug>/` consistently and
-   that plugin manifests, READMEs, and examples do not contradict each other.
-   Treat the task as incomplete until the requested files are updated and the
-   relevant checks are either run or explicitly marked as blocked.
+
+If no scripts exist, validate the changed Markdown and catalogue paths manually.
+At minimum, check that references use `plugins/<plugin-slug>/` consistently and
+that plugin manifests, READMEs, and examples do not contradict each other.
+Treat the task as incomplete until the requested files are updated and the
+relevant checks are either run or explicitly marked as blocked.
 
 ## Review Readiness
 
