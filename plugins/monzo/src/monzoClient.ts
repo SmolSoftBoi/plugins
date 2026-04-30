@@ -54,8 +54,12 @@ export class MonzoClient {
       Accept: "application/json",
     });
 
+    if (options.form !== undefined && options.json !== undefined) {
+      throw new Error("Monzo request must include either 'form' or 'json', not both.");
+    }
+
     let body: BodyInit | undefined;
-    if (options.form) {
+    if (options.form !== undefined) {
       const params = new URLSearchParams();
       for (const [key, value] of Object.entries(options.form)) {
         if (value !== undefined) {

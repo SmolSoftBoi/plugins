@@ -86,6 +86,31 @@ describe("MonzoClient", () => {
     assert.equal(await request.text(), '{"external_id":"receipt-1"}');
   });
 
+  it("rejects ambiguous form and JSON bodies before fetching", async () => {
+    let fetchCalled = false;
+    const client = new MonzoClient({
+      accessToken: "test-token",
+      apiBaseUrl: "https://example.test",
+      fetchImpl: async () => {
+        fetchCalled = true;
+        return jsonResponse({});
+      },
+    });
+
+    await assert.rejects(
+      client.request({
+        method: "POST",
+        path: "/feed",
+        form: { account_id: "acc_123" },
+        json: { account_id: "acc_123" },
+      }),
+      {
+        message: "Monzo request must include either 'form' or 'json', not both.",
+      },
+    );
+    assert.equal(fetchCalled, false);
+  });
+
   it("maps non-2xx responses to MonzoApiError", async () => {
     const client = new MonzoClient({
       accessToken: "test-token",
