@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { MonzoApiError, MonzoClient } from "../src/monzoClient.js";
+import { MonzoApiError, MonzoClient, MonzoRequestTimeoutError } from "../src/monzoClient.js";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -99,6 +99,28 @@ describe("MonzoClient", () => {
         error instanceof MonzoApiError &&
         error.status === 401 &&
         error.responseBody === '{"error":"invalid_token"}',
+    );
+  });
+
+  it("aborts stalled requests after the configured timeout", async () => {
+    const client = new MonzoClient({
+      accessToken: "test-token",
+      apiBaseUrl: "https://example.test",
+      requestTimeoutMs: 1,
+      fetchImpl: async (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("Request aborted", "AbortError"));
+          });
+        }),
+    });
+
+    await assert.rejects(
+      client.request({ path: "/ping/whoami" }),
+      (error: unknown) =>
+        error instanceof MonzoRequestTimeoutError &&
+        error.timeoutMs === 1 &&
+        error.message === "Monzo API request timed out after 1ms",
     );
   });
 });

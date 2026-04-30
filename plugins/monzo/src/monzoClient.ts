@@ -4,6 +4,7 @@ export interface MonzoClientOptions {
   accessToken: string;
   apiBaseUrl?: string;
   fetchImpl?: typeof fetch;
+  requestTimeoutMs?: number;
 }
 
 export interface MonzoRequestOptions {
@@ -25,15 +26,24 @@ export class MonzoApiError extends Error {
   }
 }
 
+export class MonzoRequestTimeoutError extends Error {
+  constructor(readonly timeoutMs: number) {
+    super(`Monzo API request timed out after ${timeoutMs}ms`);
+    this.name = "MonzoRequestTimeoutError";
+  }
+}
+
 export class MonzoClient {
   private readonly accessToken: string;
   private readonly apiBaseUrl: string;
   private readonly fetchImpl: typeof fetch;
+  private readonly requestTimeoutMs: number;
 
   constructor(options: MonzoClientOptions) {
     this.accessToken = options.accessToken;
     this.apiBaseUrl = (options.apiBaseUrl ?? "https://api.monzo.com").replace(/\/+$/, "");
     this.fetchImpl = options.fetchImpl ?? fetch;
+    this.requestTimeoutMs = options.requestTimeoutMs ?? 15_000;
   }
 
   async request<TResponse>(options: MonzoRequestOptions): Promise<TResponse> {
@@ -61,11 +71,25 @@ export class MonzoClient {
       headers.set("Content-Type", "application/json");
     }
 
-    const response = await this.fetchImpl(url, {
-      method,
-      headers,
-      body,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.requestTimeoutMs);
+
+    let response: Response;
+    try {
+      response = await this.fetchImpl(url, {
+        method,
+        headers,
+        body,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new MonzoRequestTimeoutError(this.requestTimeoutMs);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     const text = await response.text();
     if (!response.ok) {

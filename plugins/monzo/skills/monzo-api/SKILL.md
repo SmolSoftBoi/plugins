@@ -30,7 +30,7 @@ Before using any mutating Monzo tool, require all of:
   - Other account changes: `CHANGE MY MONZO ACCOUNT`
 
 If any requirement is missing, explain what is missing and do not retry the
-write automatically.
+mutation automatically.
 
 ## API Notes
 
