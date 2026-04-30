@@ -127,6 +127,23 @@ describe("MonzoClient", () => {
     );
   });
 
+  it("maps invalid 2xx JSON responses to MonzoApiError", async () => {
+    const client = new MonzoClient({
+      accessToken: "test-token",
+      apiBaseUrl: "https://example.test",
+      fetchImpl: async () => new Response("not-json", { status: 200 }),
+    });
+
+    await assert.rejects(
+      client.request({ path: "/ping/whoami" }),
+      (error: unknown) =>
+        error instanceof MonzoApiError &&
+        error.status === 200 &&
+        error.responseBody === "not-json" &&
+        error.message === "Monzo API response for HTTP 200 was not valid JSON",
+    );
+  });
+
   it("aborts stalled requests after the configured timeout", async () => {
     const client = new MonzoClient({
       accessToken: "test-token",

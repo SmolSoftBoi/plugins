@@ -108,7 +108,15 @@ export class MonzoClient {
       return {} as TResponse;
     }
 
-    return JSON.parse(text) as TResponse;
+    try {
+      return JSON.parse(text) as TResponse;
+    } catch {
+      throw new MonzoApiError(
+        `Monzo API response for HTTP ${response.status} was not valid JSON`,
+        response.status,
+        text,
+      );
+    }
   }
 
   private buildUrl(

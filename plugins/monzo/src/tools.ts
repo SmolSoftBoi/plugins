@@ -10,7 +10,7 @@ const accountIdSchema = z.object({
 
 const confirmationSchema = {
   confirm: z.boolean(),
-  confirmationText: z.string(),
+  confirmationText: z.string().min(1),
 };
 
 type ToolResultPayload = Record<string, unknown> | unknown[];
@@ -107,7 +107,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
       jsonResult(
         await client.request({
           path: `/transactions/${encodeURIComponent(transactionId)}`,
-          query: { expand: expandMerchant ? "merchant" : undefined },
+          query: { "expand[]": expandMerchant ? "merchant" : undefined },
         }),
       ),
   );
@@ -134,7 +134,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
             since,
             before,
             limit,
-            expand: expandMerchant ? "merchant" : undefined,
+            "expand[]": expandMerchant ? "merchant" : undefined,
           },
         }),
       ),
