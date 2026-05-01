@@ -3,8 +3,23 @@ import { pathToFileURL } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-import { createMonzoClientFromEnvironment } from "./monzoClient.js";
+import {
+  createMonzoClientFromEnvironment,
+  type MonzoClient,
+  type MonzoRequestOptions,
+} from "./monzoClient.js";
 import { registerMonzoTools } from "./tools.js";
+
+function createLazyMonzoClient(): Pick<MonzoClient, "request"> {
+  let client: MonzoClient | undefined;
+
+  return {
+    async request<TResponse>(options: MonzoRequestOptions): Promise<TResponse> {
+      client ??= createMonzoClientFromEnvironment();
+      return client.request<TResponse>(options);
+    },
+  };
+}
 
 export function createServer(): McpServer {
   const server = new McpServer({
@@ -14,7 +29,7 @@ export function createServer(): McpServer {
 
   registerMonzoTools({
     server,
-    client: createMonzoClientFromEnvironment(),
+    client: createLazyMonzoClient(),
   });
 
   return server;

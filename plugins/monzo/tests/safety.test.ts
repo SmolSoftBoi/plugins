@@ -34,6 +34,19 @@ describe("assertMutationAllowed", () => {
     );
   });
 
+  it("blocks account changes when confirm is false even with the exact confirmation text", () => {
+    assert.throws(() =>
+      assertMutationAllowed(
+        { MONZO_ENABLE_MUTATIONS: "true" },
+        "account",
+        {
+          confirm: false,
+          confirmationText: ACCOUNT_CHANGE_CONFIRMATION,
+        },
+      ),
+    );
+  });
+
   it("allows account changes with the exact confirmation text", () => {
     assert.doesNotThrow(() =>
       assertMutationAllowed(

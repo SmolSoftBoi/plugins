@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { MonzoClient } from "./monzoClient.js";
+import type { MonzoClient } from "./monzoClient.js";
 import { ACCOUNT_CHANGE_CONFIRMATION, MONEY_MOVEMENT_CONFIRMATION, assertMutationAllowed } from "./safety.js";
 
 const accountIdSchema = z.object({
@@ -28,7 +28,7 @@ function jsonResult(payload: ToolResultPayload) {
 
 export interface RegisterMonzoToolsOptions {
   server: McpServer;
-  client: MonzoClient;
+  client: Pick<MonzoClient, "request">;
   env?: NodeJS.ProcessEnv;
 }
 

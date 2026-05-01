@@ -78,24 +78,51 @@ export class MonzoClient {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.requestTimeoutMs);
 
-    let response: Response;
-    try {
-      response = await this.fetchImpl(url, {
-        method,
-        headers,
-        body,
-        signal: controller.signal,
-      });
-    } catch (error) {
+    let timeoutError: MonzoRequestTimeoutError | undefined;
+    let removeTimeoutListener: (() => void) | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      const handleAbort = () => {
+        timeoutError = new MonzoRequestTimeoutError(this.requestTimeoutMs);
+        reject(timeoutError);
+      };
+
       if (controller.signal.aborted) {
-        throw new MonzoRequestTimeoutError(this.requestTimeoutMs);
+        handleAbort();
+        return;
+      }
+
+      controller.signal.addEventListener("abort", handleAbort, { once: true });
+      removeTimeoutListener = () => {
+        controller.signal.removeEventListener("abort", handleAbort);
+      };
+    });
+
+    let response: Response;
+    let text: string;
+    try {
+      response = await Promise.race([
+        this.fetchImpl(url, {
+          method,
+          headers,
+          body,
+          signal: controller.signal,
+        }),
+        timeoutPromise,
+      ]);
+      text = await Promise.race([response.text(), timeoutPromise]);
+    } catch (error) {
+      if (error instanceof MonzoRequestTimeoutError) {
+        throw error;
+      }
+      if (controller.signal.aborted) {
+        throw timeoutError ?? new MonzoRequestTimeoutError(this.requestTimeoutMs);
       }
       throw error;
     } finally {
       clearTimeout(timeoutId);
+      removeTimeoutListener?.();
     }
 
-    const text = await response.text();
     if (!response.ok) {
       throw new MonzoApiError(
         `Monzo API request failed with HTTP ${response.status}`,
@@ -123,7 +150,11 @@ export class MonzoClient {
     path: string,
     query: Record<string, string | number | boolean | undefined> | undefined,
   ): string {
-    const url = new URL(path, `${this.apiBaseUrl}/`);
+    const baseUrl = new URL(this.apiBaseUrl);
+    const basePath = baseUrl.pathname.replace(/\/+$/, "");
+    const pathRelativeToBase = path.replace(/^\/+/, "");
+    const url = new URL(pathRelativeToBase, `${baseUrl.origin}${basePath}/`);
+
     for (const [key, value] of Object.entries(query ?? {})) {
       if (value !== undefined) {
         url.searchParams.set(key, String(value));

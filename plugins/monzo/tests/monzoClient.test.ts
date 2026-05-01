@@ -3,12 +3,36 @@ import { describe, it } from "node:test";
 
 import { MonzoApiError, MonzoClient, MonzoRequestTimeoutError } from "../src/monzoClient.js";
 
+const timeoutWatchdogMs = 500;
+
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
     status: 200,
     headers: { "Content-Type": "application/json" },
     ...init,
   });
+}
+
+async function withWatchdog<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(message));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 describe("MonzoClient", () => {
@@ -35,6 +59,31 @@ describe("MonzoClient", () => {
     assert.equal(requests.length, 1);
     assert.equal(requests[0].url, "https://example.test/transactions?account_id=acc_123&limit=5");
     assert.equal(requests[0].headers.get("Authorization"), "Bearer test-token");
+  });
+
+  it("preserves path components in API base URLs", async () => {
+    const requests: Request[] = [];
+    const client = new MonzoClient({
+      accessToken: "test-token",
+      apiBaseUrl: "https://example.test/mock/monzo/",
+      fetchImpl: async (input, init) => {
+        requests.push(new Request(input, init));
+        return jsonResponse({ ok: true });
+      },
+    });
+
+    await client.request({
+      path: "/transactions",
+      query: {
+        account_id: "acc_123",
+      },
+    });
+
+    assert.equal(requests.length, 1);
+    assert.equal(
+      requests[0].url,
+      "https://example.test/mock/monzo/transactions?account_id=acc_123",
+    );
   });
 
   it("sends form encoded bodies", async () => {
@@ -157,12 +206,47 @@ describe("MonzoClient", () => {
         }),
     });
 
-    await assert.rejects(
-      client.request({ path: "/ping/whoami" }),
-      (error: unknown) =>
-        error instanceof MonzoRequestTimeoutError &&
-        error.timeoutMs === 1 &&
-        error.message === "Monzo API request timed out after 1ms",
+    await withWatchdog(
+      assert.rejects(
+        client.request({ path: "/ping/whoami" }),
+        (error: unknown) =>
+          error instanceof MonzoRequestTimeoutError &&
+          error.timeoutMs === 1 &&
+          error.message === "Monzo API request timed out after 1ms",
+      ),
+      timeoutWatchdogMs,
+      "Timed out waiting for stalled Monzo request abort.",
+    );
+  });
+
+  it("aborts stalled response body reads after the configured timeout", async () => {
+    const client = new MonzoClient({
+      accessToken: "test-token",
+      apiBaseUrl: "https://example.test",
+      requestTimeoutMs: 1,
+      fetchImpl: async (_input, init) =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              init?.signal?.addEventListener("abort", () => {
+                controller.error(new DOMException("Response body aborted", "AbortError"));
+              });
+            },
+          }),
+          { status: 200 },
+        ),
+    });
+
+    await withWatchdog(
+      assert.rejects(
+        client.request({ path: "/ping/whoami" }),
+        (error: unknown) =>
+          error instanceof MonzoRequestTimeoutError &&
+          error.timeoutMs === 1 &&
+          error.message === "Monzo API request timed out after 1ms",
+      ),
+      timeoutWatchdogMs,
+      "Timed out waiting for stalled Monzo response body abort.",
     );
   });
 });
