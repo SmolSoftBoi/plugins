@@ -63,8 +63,7 @@ describe("createServer", () => {
         },
       ]);
     } finally {
-      await client.close();
-      await server.close();
+      await Promise.allSettled([client.close(), server.close()]);
     }
   });
 });

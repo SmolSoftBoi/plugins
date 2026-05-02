@@ -37,7 +37,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
     "monzo_whoami",
     {
       title: "Monzo whoami",
-      description: "Inspect the current Monzo access token and authenticated user.",
+      description: "Inspect the authenticated user for the configured Monzo access token.",
       inputSchema: {},
     },
     async () => jsonResult(await client.request({ path: "/ping/whoami" })),
