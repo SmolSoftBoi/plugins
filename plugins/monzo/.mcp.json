@@ -2,7 +2,7 @@
   "mcpServers": {
     "monzo": {
       "command": "node",
-      "cwd": ".",
+      "cwd": "./",
       "args": ["./dist/index.js"],
       "env": {
         "MONZO_ACCESS_TOKEN": "${MONZO_ACCESS_TOKEN}",

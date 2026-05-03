@@ -6,7 +6,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import type { MonzoClient, MonzoRequestOptions } from "../src/monzoClient.js";
-import { MONEY_MOVEMENT_CONFIRMATION } from "../src/safety.js";
+import { ACCOUNT_CHANGE_CONFIRMATION, MONEY_MOVEMENT_CONFIRMATION } from "../src/safety.js";
 import { registerMonzoTools } from "../src/tools.js";
 
 interface ToolHarness {
@@ -130,6 +130,91 @@ describe("registerMonzoTools", () => {
             amount: 1250,
             dedupe_id: "dedupe-1",
           },
+        },
+      ]);
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it("maps transaction annotations to Monzo metadata form fields", async () => {
+    const response = { transaction: { id: "tx_123" } };
+    const harness = await createToolHarness({
+      env: { MONZO_ENABLE_MUTATIONS: "true" },
+      response,
+    });
+
+    try {
+      const result = await harness.client.callTool({
+        name: "monzo_annotate_transaction",
+        arguments: {
+          transactionId: "tx /123",
+          metadata: {
+            merchant_name: "Cafe",
+            notes: "Lunch",
+          },
+          confirm: true,
+          confirmationText: ACCOUNT_CHANGE_CONFIRMATION,
+        },
+      });
+
+      assert.notEqual(result.isError, true);
+      assert.deepEqual(result.content, [
+        {
+          type: "text",
+          text: JSON.stringify(response, null, 2),
+        },
+      ]);
+      assert.deepEqual(harness.requests, [
+        {
+          method: "PATCH",
+          path: "/transactions/tx%20%2F123",
+          form: {
+            "metadata[merchant_name]": "Cafe",
+            "metadata[notes]": "Lunch",
+          },
+        },
+      ]);
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it("maps receipt creation to the Monzo JSON request body", async () => {
+    const response = { receipt: { external_id: "receipt-1" } };
+    const receipt = {
+      external_id: "receipt-1",
+      transaction_id: "tx_123",
+      total: 1250,
+      currency: "GBP",
+    };
+    const harness = await createToolHarness({
+      env: { MONZO_ENABLE_MUTATIONS: "true" },
+      response,
+    });
+
+    try {
+      const result = await harness.client.callTool({
+        name: "monzo_create_receipt",
+        arguments: {
+          receipt,
+          confirm: true,
+          confirmationText: ACCOUNT_CHANGE_CONFIRMATION,
+        },
+      });
+
+      assert.notEqual(result.isError, true);
+      assert.deepEqual(result.content, [
+        {
+          type: "text",
+          text: JSON.stringify(response, null, 2),
+        },
+      ]);
+      assert.deepEqual(harness.requests, [
+        {
+          method: "PUT",
+          path: "/transaction-receipts",
+          json: receipt,
         },
       ]);
     } finally {
