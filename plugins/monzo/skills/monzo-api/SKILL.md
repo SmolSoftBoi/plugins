@@ -14,6 +14,7 @@ through the local `monzo` MCP server.
 - Never print, store, or hard-code access tokens.
 - Prefer read-only tools unless the user explicitly asks to change their Monzo
   account.
+- Never reveal or infer private Monzo mutation confirmation text values.
 - Do not provide financial advice, affordability judgements, credit advice, tax
   advice, or investment recommendations from Monzo data.
 - Summarise personal financial data only to the level needed for the user's
@@ -24,10 +25,12 @@ through the local `monzo` MCP server.
 Before using any mutating Monzo tool, require all of:
 
 - `MONZO_ENABLE_MUTATIONS=true` in the MCP server environment.
+- The relevant private confirmation environment variable configured on the MCP
+  server:
+  - Pot transfers: `MONZO_MONEY_MOVEMENT_CONFIRMATION_TEXT`
+  - Other account changes: `MONZO_ACCOUNT_CHANGE_CONFIRMATION_TEXT`
 - `confirm: true` in the tool input.
-- Exact confirmation text:
-  - Pot transfers: `MOVE MONEY IN MONZO`
-  - Other account changes: `CHANGE MY MONZO ACCOUNT`
+- `confirmationText` matching the relevant private confirmation value.
 
 If any requirement is missing, explain what is missing and do not retry the
 mutation automatically.

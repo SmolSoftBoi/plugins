@@ -2,13 +2,8 @@
   "mcpServers": {
     "monzo": {
       "command": "node",
-      "cwd": "./",
-      "args": ["./dist/index.js"],
-      "env": {
-        "MONZO_ACCESS_TOKEN": "${MONZO_ACCESS_TOKEN}",
-        "MONZO_ENABLE_MUTATIONS": "${MONZO_ENABLE_MUTATIONS}",
-        "MONZO_API_BASE_URL": "${MONZO_API_BASE_URL}"
-      }
+      "cwd": "./plugins/monzo",
+      "args": ["./dist/index.js"]
     }
   }
 }

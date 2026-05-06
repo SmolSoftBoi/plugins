@@ -35,7 +35,7 @@
     "defaultPrompt": [
       "Show my Monzo accounts.",
       "List recent Monzo transactions.",
-      "Show the Monzo mutation confirmations."
+      "Show the Monzo mutation requirements."
     ],
     "brandColor": "#14233C"
   }

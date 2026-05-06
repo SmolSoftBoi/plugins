@@ -6,8 +6,17 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import type { MonzoClient, MonzoRequestOptions } from "../src/monzoClient.js";
-import { ACCOUNT_CHANGE_CONFIRMATION, MONEY_MOVEMENT_CONFIRMATION } from "../src/safety.js";
+import { ACCOUNT_CHANGE_CONFIRMATION_ENV, MONEY_MOVEMENT_CONFIRMATION_ENV } from "../src/safety.js";
 import { registerMonzoTools } from "../src/tools.js";
+
+const privateAccountChangeConfirmation = "private-account-change-confirmation";
+const privateMoneyMovementConfirmation = "private-money-movement-confirmation";
+
+const mutationEnv: NodeJS.ProcessEnv = {
+  MONZO_ENABLE_MUTATIONS: "true",
+  [ACCOUNT_CHANGE_CONFIRMATION_ENV]: privateAccountChangeConfirmation,
+  [MONEY_MOVEMENT_CONFIRMATION_ENV]: privateMoneyMovementConfirmation,
+};
 
 interface ToolHarness {
   client: Client;
@@ -97,7 +106,7 @@ describe("registerMonzoTools", () => {
   it("allows confirmed pot deposits and sends form-encoded request fields", async () => {
     const response = { pot: { id: "pot_123" } };
     const harness = await createToolHarness({
-      env: { MONZO_ENABLE_MUTATIONS: "true" },
+      env: mutationEnv,
       response,
     });
 
@@ -110,7 +119,7 @@ describe("registerMonzoTools", () => {
           amount: 1250,
           dedupeId: "dedupe-1",
           confirm: true,
-          confirmationText: MONEY_MOVEMENT_CONFIRMATION,
+          confirmationText: privateMoneyMovementConfirmation,
         },
       });
 
@@ -137,10 +146,53 @@ describe("registerMonzoTools", () => {
     }
   });
 
+  it("allows confirmed pot withdrawals and sends form-encoded request fields", async () => {
+    const response = { pot: { id: "pot_123" } };
+    const harness = await createToolHarness({
+      env: mutationEnv,
+      response,
+    });
+
+    try {
+      const result = await harness.client.callTool({
+        name: "monzo_withdraw_from_pot",
+        arguments: {
+          potId: "pot /123",
+          destinationAccountId: "acc_123",
+          amount: 750,
+          dedupeId: "dedupe-2",
+          confirm: true,
+          confirmationText: privateMoneyMovementConfirmation,
+        },
+      });
+
+      assert.notEqual(result.isError, true);
+      assert.deepEqual(result.content, [
+        {
+          type: "text",
+          text: JSON.stringify(response, null, 2),
+        },
+      ]);
+      assert.deepEqual(harness.requests, [
+        {
+          method: "PUT",
+          path: "/pots/pot%20%2F123/withdraw",
+          form: {
+            destination_account_id: "acc_123",
+            amount: 750,
+            dedupe_id: "dedupe-2",
+          },
+        },
+      ]);
+    } finally {
+      await harness.close();
+    }
+  });
+
   it("maps transaction annotations to Monzo metadata form fields", async () => {
     const response = { transaction: { id: "tx_123" } };
     const harness = await createToolHarness({
-      env: { MONZO_ENABLE_MUTATIONS: "true" },
+      env: mutationEnv,
       response,
     });
 
@@ -154,7 +206,7 @@ describe("registerMonzoTools", () => {
             notes: "Lunch",
           },
           confirm: true,
-          confirmationText: ACCOUNT_CHANGE_CONFIRMATION,
+          confirmationText: privateAccountChangeConfirmation,
         },
       });
 
@@ -189,7 +241,7 @@ describe("registerMonzoTools", () => {
       currency: "GBP",
     };
     const harness = await createToolHarness({
-      env: { MONZO_ENABLE_MUTATIONS: "true" },
+      env: mutationEnv,
       response,
     });
 
@@ -199,7 +251,7 @@ describe("registerMonzoTools", () => {
         arguments: {
           receipt,
           confirm: true,
-          confirmationText: ACCOUNT_CHANGE_CONFIRMATION,
+          confirmationText: privateAccountChangeConfirmation,
         },
       });
 
@@ -222,9 +274,44 @@ describe("registerMonzoTools", () => {
     }
   });
 
+  it("reports mutation requirements without leaking private confirmation text", async () => {
+    const harness = await createToolHarness({
+      env: mutationEnv,
+    });
+
+    try {
+      const result = await harness.client.callTool({
+        name: "monzo_confirmation_phrases",
+        arguments: {},
+      });
+
+      assert.notEqual(result.isError, true);
+      assert.ok(Array.isArray(result.content));
+      const [content] = result.content;
+      const textContent = content as { type?: unknown; text?: unknown };
+      assert.equal(textContent.type, "text");
+      const payloadText = textContent.text;
+      if (typeof payloadText !== "string") {
+        throw new TypeError("Expected monzo_confirmation_phrases to return text content.");
+      }
+      const payload = JSON.parse(payloadText) as Record<string, unknown>;
+      assert.deepEqual(payload, {
+        environmentFlag: "MONZO_ENABLE_MUTATIONS=true",
+        moneyMovementConfirmationEnv: MONEY_MOVEMENT_CONFIRMATION_ENV,
+        accountChangeConfirmationEnv: ACCOUNT_CHANGE_CONFIRMATION_ENV,
+        valuesAreSecret: true,
+      });
+      const serialisedPayload = JSON.stringify(payload);
+      assert.equal(serialisedPayload.includes(privateMoneyMovementConfirmation), false);
+      assert.equal(serialisedPayload.includes(privateAccountChangeConfirmation), false);
+    } finally {
+      await harness.close();
+    }
+  });
+
   it("blocks unconfirmed pot deposits before calling Monzo", async () => {
     const harness = await createToolHarness({
-      env: { MONZO_ENABLE_MUTATIONS: "true" },
+      env: mutationEnv,
     });
 
     try {
@@ -236,7 +323,7 @@ describe("registerMonzoTools", () => {
           amount: 1250,
           dedupeId: "dedupe-1",
           confirm: false,
-          confirmationText: MONEY_MOVEMENT_CONFIRMATION,
+          confirmationText: privateMoneyMovementConfirmation,
         },
       });
 
@@ -244,7 +331,7 @@ describe("registerMonzoTools", () => {
       assert.deepEqual(result.content, [
         {
           type: "text",
-          text: `Mutating Monzo tools require confirm=true and confirmationText="${MONEY_MOVEMENT_CONFIRMATION}".`,
+          text: `Mutating Monzo tools require confirm=true and the private money movement confirmation text configured in ${MONEY_MOVEMENT_CONFIRMATION_ENV}.`,
         },
       ]);
       assert.deepEqual(harness.requests, []);

@@ -2,7 +2,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import type { MonzoClient } from "./monzoClient.js";
-import { ACCOUNT_CHANGE_CONFIRMATION, MONEY_MOVEMENT_CONFIRMATION, assertMutationAllowed } from "./safety.js";
+import {
+  ACCOUNT_CHANGE_CONFIRMATION_ENV,
+  MONEY_MOVEMENT_CONFIRMATION_ENV,
+  assertMutationAllowed,
+} from "./safety.js";
 
 const accountIdSchema = z.object({
   accountId: z.string().min(1),
@@ -12,6 +16,9 @@ const confirmationSchema = {
   confirm: z.boolean(),
   confirmationText: z.string().min(1),
 };
+
+const moneyMovementConfirmationDescription = `Requires confirm=true and the private confirmation text configured in ${MONEY_MOVEMENT_CONFIRMATION_ENV}.`;
+const accountChangeConfirmationDescription = `Requires confirm=true and the private confirmation text configured in ${ACCOUNT_CHANGE_CONFIRMATION_ENV}.`;
 
 type ToolResultPayload = Record<string, unknown> | unknown[];
 
@@ -178,7 +185,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
     "monzo_deposit_into_pot",
     {
       title: "Deposit into Monzo pot",
-      description: "Move money from a Monzo account into a pot. Requires explicit money movement confirmation.",
+      description: `Move money from a Monzo account into a pot. ${moneyMovementConfirmationDescription}`,
       inputSchema: {
         potId: z.string().min(1),
         sourceAccountId: z.string().min(1),
@@ -207,7 +214,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
     "monzo_withdraw_from_pot",
     {
       title: "Withdraw from Monzo pot",
-      description: "Move money from a Monzo pot into an account. Requires explicit money movement confirmation.",
+      description: `Move money from a Monzo pot into an account. ${moneyMovementConfirmationDescription}`,
       inputSchema: {
         potId: z.string().min(1),
         destinationAccountId: z.string().min(1),
@@ -236,7 +243,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
     "monzo_annotate_transaction",
     {
       title: "Annotate Monzo transaction",
-      description: `Update private metadata for a Monzo transaction. Requires "${ACCOUNT_CHANGE_CONFIRMATION}".`,
+      description: `Update private metadata for a Monzo transaction. ${accountChangeConfirmationDescription}`,
       inputSchema: {
         transactionId: z.string().min(1),
         metadata: z.record(z.string(), z.string()),
@@ -263,7 +270,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
     "monzo_create_feed_item",
     {
       title: "Create Monzo feed item",
-      description: `Create a basic feed item in the Monzo app. Requires "${ACCOUNT_CHANGE_CONFIRMATION}".`,
+      description: `Create a basic feed item in the Monzo app. ${accountChangeConfirmationDescription}`,
       inputSchema: {
         accountId: z.string().min(1),
         title: z.string().min(1),
@@ -313,7 +320,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
     "monzo_create_attachment_upload",
     {
       title: "Create Monzo attachment upload",
-      description: `Create a temporary attachment upload URL. Requires "${ACCOUNT_CHANGE_CONFIRMATION}".`,
+      description: `Create a temporary attachment upload URL. ${accountChangeConfirmationDescription}`,
       inputSchema: {
         fileName: z.string().min(1),
         fileType: z.string().min(1),
@@ -341,7 +348,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
     "monzo_register_attachment",
     {
       title: "Register Monzo attachment",
-      description: `Register an attachment against a transaction. Requires "${ACCOUNT_CHANGE_CONFIRMATION}".`,
+      description: `Register an attachment against a transaction. ${accountChangeConfirmationDescription}`,
       inputSchema: {
         externalId: z.string().min(1),
         fileUrl: z.string().url(),
@@ -369,7 +376,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
     "monzo_deregister_attachment",
     {
       title: "Deregister Monzo attachment",
-      description: `Remove a registered attachment. Requires "${ACCOUNT_CHANGE_CONFIRMATION}".`,
+      description: `Remove a registered attachment. ${accountChangeConfirmationDescription}`,
       inputSchema: {
         attachmentId: z.string().min(1),
         ...confirmationSchema,
@@ -391,7 +398,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
     "monzo_create_receipt",
     {
       title: "Create Monzo receipt",
-      description: `Create or update a transaction receipt using Monzo's JSON receipt API. Requires "${ACCOUNT_CHANGE_CONFIRMATION}".`,
+      description: `Create or update a transaction receipt using Monzo's JSON receipt API. ${accountChangeConfirmationDescription}`,
       inputSchema: {
         receipt: z.record(z.string(), z.unknown()),
         ...confirmationSchema,
@@ -413,7 +420,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
     "monzo_delete_receipt",
     {
       title: "Delete Monzo receipt",
-      description: `Delete a receipt by external ID. Requires "${ACCOUNT_CHANGE_CONFIRMATION}".`,
+      description: `Delete a receipt by external ID. ${accountChangeConfirmationDescription}`,
       inputSchema: {
         externalId: z.string().min(1),
         ...confirmationSchema,
@@ -435,7 +442,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
     "monzo_register_webhook",
     {
       title: "Register Monzo webhook",
-      description: `Register a webhook URL for a Monzo account. Requires "${ACCOUNT_CHANGE_CONFIRMATION}".`,
+      description: `Register a webhook URL for a Monzo account. ${accountChangeConfirmationDescription}`,
       inputSchema: {
         accountId: z.string().min(1),
         url: z.string().url(),
@@ -461,7 +468,7 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
     "monzo_delete_webhook",
     {
       title: "Delete Monzo webhook",
-      description: `Delete a Monzo webhook. Requires "${ACCOUNT_CHANGE_CONFIRMATION}".`,
+      description: `Delete a Monzo webhook. ${accountChangeConfirmationDescription}`,
       inputSchema: {
         webhookId: z.string().min(1),
         ...confirmationSchema,
@@ -481,15 +488,16 @@ export function registerMonzoTools({ server, client, env = process.env }: Regist
   server.registerTool(
     "monzo_confirmation_phrases",
     {
-      title: "Monzo confirmation phrases",
-      description: "Return the exact confirmation phrases required for mutating tools.",
+      title: "Monzo confirmation requirements",
+      description: "Return the environment variable names required for mutating tools without exposing configured private values.",
       inputSchema: {},
     },
     async () =>
       jsonResult({
-        moneyMovement: MONEY_MOVEMENT_CONFIRMATION,
-        accountChange: ACCOUNT_CHANGE_CONFIRMATION,
         environmentFlag: "MONZO_ENABLE_MUTATIONS=true",
+        moneyMovementConfirmationEnv: MONEY_MOVEMENT_CONFIRMATION_ENV,
+        accountChangeConfirmationEnv: ACCOUNT_CHANGE_CONFIRMATION_ENV,
+        valuesAreSecret: true,
       }),
   );
 }
