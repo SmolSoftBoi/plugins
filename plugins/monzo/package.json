@@ -6,7 +6,7 @@
   "description": "Unofficial Codex MCP plugin for the Monzo Developer API.",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=18"
+    "node": ">=20.6.0"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -21,7 +21,7 @@
     "zod": "4.3.6"
   },
   "devDependencies": {
-    "@types/node": "25.6.0",
+    "@types/node": "20.19.39",
     "tsx": "4.21.0",
     "typescript": "6.0.3"
   }

@@ -20,7 +20,7 @@ it only with your own account or a small set of users you explicitly allow.
 
 ## Requirements
 
-- Node.js 18 or newer.
+- Node.js 20.6 or newer.
 - A Monzo Developer API access token from the Monzo developer tools or API
   playground.
 - Strong Customer Authentication approval in the Monzo app before the token can
