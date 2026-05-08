@@ -1,0 +1,20 @@
+{
+  "name": "smolsoftboi-plugins",
+  "interface": {
+    "displayName": "SmolSoftBoi Plugins"
+  },
+  "plugins": [
+    {
+      "name": "monzo",
+      "source": {
+        "source": "local",
+        "path": "./plugins/monzo"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

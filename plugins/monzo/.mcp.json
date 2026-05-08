@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "monzo": {
+      "command": "node",
+      "cwd": ".",
+      "args": ["./dist/index.js"]
+    }
+  }
+}

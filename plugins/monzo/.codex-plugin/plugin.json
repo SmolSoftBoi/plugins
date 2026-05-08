@@ -1,0 +1,42 @@
+{
+  "name": "monzo",
+  "version": "0.1.0",
+  "description": "Unofficial MCP integration for the Monzo Developer API.",
+  "author": {
+    "name": "Kristian Matthews-Kennington",
+    "email": "kristian@matthews-kennington.com",
+    "url": "https://github.com/SmolSoftBoi"
+  },
+  "homepage": "https://docs.monzo.com/",
+  "repository": "https://github.com/SmolSoftBoi/plugins",
+  "license": "UNLICENSED",
+  "keywords": [
+    "monzo",
+    "banking",
+    "developer-api",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Monzo",
+    "shortDescription": "Use the Monzo Developer API from Codex.",
+    "longDescription": "Unofficial Codex plugin that exposes Monzo Developer API reads and explicitly confirmed account-changing actions through a local MCP server.",
+    "developerName": "Kristian Matthews-Kennington",
+    "category": "Productivity",
+    "capabilities": [
+      "MCP",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://docs.monzo.com/",
+    "privacyPolicyURL": "https://monzo.com/legal/privacy-notice",
+    "termsOfServiceURL": "https://monzo.com/legal/terms-and-conditions",
+    "defaultPrompt": [
+      "Show my Monzo accounts.",
+      "List recent Monzo transactions.",
+      "Show the Monzo mutation requirements."
+    ],
+    "brandColor": "#14233C"
+  }
+}
