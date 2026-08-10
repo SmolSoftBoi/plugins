@@ -17,12 +17,12 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.29.0",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "zod": "4.3.6"
   },
   "devDependencies": {
     "@types/node": "20.19.39",
-    "tsx": "4.21.0",
+    "tsx": "4.23.12",
     "typescript": "6.0.3"
   }
 }
