@@ -1,0 +1,30 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "affinity",
+  "version": "0.1.0",
+  "description": "Connect Codex to the local Affinity desktop app for document previews and scripting.",
+  "author": {
+    "name": "Kristian Matthews-Kennington",
+    "url": "https://github.com/SmolSoftBoi"
+  },
+  "homepage": "https://www.affinity.studio/integrations",
+  "repository": "https://github.com/SmolSoftBoi/plugins",
+  "keywords": ["affinity", "design", "scripting", "mcp"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Affinity",
+        "shortDescription": "Preview and script in Affinity",
+        "longDescription": "Unofficial local integration that uses Affinity's MCP server to render documents, automate edits and work with reusable scripts.",
+        "developerName": "Kristian Matthews-Kennington",
+        "category": "Creativity",
+        "capabilities": ["MCP", "Read", "Write"],
+        "defaultPrompt": [
+          "List the Affinity SDK documentation topics.",
+          "Preview the selection in my active Affinity document.",
+          "Rename the layers in my active Affinity document."
+        ]
+      }
+    }
+  }
+}
