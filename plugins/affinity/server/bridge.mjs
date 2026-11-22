@@ -19,15 +19,18 @@ function requestAffinity(url, options, body) {
 async function* readEvents(response) {
   response.setEncoding('utf8');
   let remainder = '';
+  let trailingCr = false;
   let event = 'message';
   let data = [];
 
   for await (const chunk of response) {
-    const lines = (remainder + chunk).split('\n');
+    // A trailing CR already ended a line. A leading LF in the next chunk belongs to it.
+    const start = trailingCr && chunk.startsWith('\n') ? 1 : 0;
+    const lines = (remainder + chunk.slice(start)).split(/\r\n|\r|\n/);
     remainder = lines.pop();
+    trailingCr = chunk.endsWith('\r');
 
-    for (const rawLine of lines) {
-      const line = rawLine.replace(/\r$/, '');
+    for (const line of lines) {
       if (line === '') {
         if (data.length > 0) yield { event, data: data.join('\n') };
         event = 'message';

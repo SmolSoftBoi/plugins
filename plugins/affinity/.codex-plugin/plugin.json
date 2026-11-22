@@ -10,7 +10,7 @@
   "repository": "https://github.com/SmolSoftBoi/plugins",
   "keywords": ["affinity", "design", "scripting", "mcp"],
   "skills": "./skills/",
-  "mcpServers": "./mcp.json",
+  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Affinity",
     "shortDescription": "Preview and script in Affinity",
